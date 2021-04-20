@@ -34,6 +34,8 @@ Cost_Business int not null,
 Seats_Available_Eco int not null,
 Seats_Available_Business int not null)
 
+select * from Flight_Schedules
+
 Create table Flight_Reservation
 (Pnr_no int primary key identity(100,10),
 Flight_Number int Foreign key references Flight_Schedules(Flight_Number) not null,
@@ -43,8 +45,12 @@ Reservation_Time time not null,
 num_of_Seats int not null,
 Classtype varchar(30) not null,
 total_price int not null,
-status varchar(30) not null)
+status varchar(30) not null,
+seats varchar(8000))
 
+
+
+select * from Flight_Reservation
 
 Create table Passenger_Details
 (Passenger_id int primary key identity,
@@ -61,12 +67,12 @@ Insert Into Passenger_Details values(490,'Ancbdjbcdb202','Abc','Def','11/28/2002
 Insert into Passenger_Details values(100,20202,'psg_111','A','11/28/2002','Female',1234567897,'Yes')
 
 Create table Payment_Details
-(User_Id int Foreign key references User_Registration(User_Id) not null,
+(User_Id int Foreign key references User_Registration(User_Id),
 CardNo bigint primary key,
 cardtype varchar(30) not null,
 Expiry_Month int not null,
 Expiry_year int not null,
-Balance int not null)
+Balance bigint )
 
 
 Create table Cancellation
@@ -80,6 +86,9 @@ Status varchar(30) not null)
 
 alter table Flight_Reservation add Seats varchar(8000) 
 alter table Flight_Schedules add Seats varchar(8000) 
+alter table Flight_Schedules alter column Seats_Available_Business int 
+--alter table Flight_Reservation 
+ALTER TABLE Flight_Reservation ALTER COLUMN  total_price int;
 
 Select * from User_Registration
 Select * from City_Information
@@ -88,6 +97,9 @@ Select * from Flight_Reservation
 Select * from Passenger_Details
 Select * from Payment_Details
 Select * from Cancellation
+
+truncate table Flight_Reservation
+delete from User_Registration where USER_ID>1
 
 
 
@@ -99,16 +111,22 @@ Insert into City_Information values(105,'Surat Airport','Gujrat',605601)
 
 Insert into Payment_Details values(1,111111111111,'Debit',04,25,350000)
 Insert into Payment_Details values(2,222222222222,'Debit',04,25,180000)
-Insert into Payment_Details values(3,123457777,'Credit',09,21,65000)
+Insert into Payment_Details values(6,333333333333,'Credit',09,21,1000000)
 --Insert into Payment_Details values(4,123458888,'Debit',07,25,95000)
 --Insert into Payment_Details values(1,121111111,'Credit',04,25,75000)
+select * from Payment_Details
+select * from Flight_Reservation
 
 
 
 
+create proc sp_InsertCardDetails(@UserId int,@CardNo bigint, @cardtype varchar(30), @Expiry_Month int, @Expiry_year int, @Balance bigint)
+	as
+	begin 
+	Insert into Payment_Details values(@UserId,@CardNo,@cardtype,@Expiry_Month,@Expiry_year,@Balance)
+	end
 
-
-
+	exec sp_InsertCardDetails 1,121212121212,'credit',04,25,100000
 
 
 
@@ -141,13 +159,13 @@ exec sp_CancelledTickets 1
 create or alter proc sp_BookedTickets(@uid int)
 as
 begin
-Select * from (Select r.User_Id,r.pnr_no,c.Airport_Name,c.Location,c.Zip_Code,s.Flight_date,r.Flight_Number,s.origin,s.Destination,s.Flight_Departing_Time,s.Flight_Arrival_Time ,r.Reservation_Date,r.Reservation_Time,r.num_of_Seats,r.Classtype,r.total_price,r.status
+Select * from (Select r.User_Id,r.pnr_no,c.Airport_Name,c.Location,c.Zip_Code,s.Flight_date,r.Flight_Number,s.origin,s.Destination,s.Flight_Departing_Time,s.Flight_Arrival_Time ,r.Reservation_Date,r.Reservation_Time,r.num_of_Seats,r.Classtype,r.total_price,r.status,r.Seats
 from Flight_Reservation r ,Flight_Schedules s,City_Information c
 where s.Flight_Number=r.Flight_Number and s.Airport_Code=c.Airport_Code) as BookedTickets 
 where status='success' and User_Id=@uid
 end
 
-exec sp_BookedTickets 2
+exec sp_BookedTickets 1
 
 
 
@@ -197,6 +215,65 @@ else
 end
 
 exec sp_DateCompare 32
+
+
    
 
+   create or alter proc sp_GetAllFlightDetails
+   as
+   begin
+   select * from Flight_Schedules
+   end
+   exec sp_GetAllFlightDetails
 
+   create or alter proc sp_BookingDetailsByID(@uid int)
+   as
+   begin
+   --select * from Flight_Reservation where User_Id=@uid and status='Success'
+   Select * from (Select r.User_Id,r.pnr_no,c.Airport_Name,c.Location,c.Zip_Code,s.Flight_date,r.Flight_Number,s.origin,s.Destination,s.Flight_Departing_Time,s.Flight_Arrival_Time ,r.Reservation_Date,r.Reservation_Time,r.num_of_Seats,r.Classtype,r.total_price,r.status
+from Flight_Reservation r ,Flight_Schedules s,City_Information c
+where s.Flight_Number=r.Flight_Number and s.Airport_Code=c.Airport_Code) as BookedTickets 
+where status='success' and User_Id=@uid
+   end
+   exec sp_BookingDetailsByID 1
+
+   create or alter proc sp_GetPsgDetailsByPnr(@pnr int)
+   as
+   begin
+   select * from Passenger_Details where Pnr_no=@pnr
+   end
+   exec sp_GetPsgDetailsByPnr 10510
+
+   create or alter proc sp_GetIdByEmail(@email varchar(40))
+   as
+   begin
+   select * from User_Registration where EmailID=@email
+   end
+   exec sp_GetIdByEmail 'a@b.c'
+   select * from User_Registration
+   delete from User_Registration where User_Id=3
+
+   create or alter proc sp_GetFlights(@Flight_Name varchar(40), @Flight_Date varchar(40), @Origin varchar(40), @Destination varchar(40))
+   as
+   begin 
+   select * from Flight_Schedules where Flight_Name=@Flight_Name and Flight_Date=@Flight_Date and Origin= @Origin and Destination=@Destination
+   end
+   exec sp_GetFlights 'AirIndia', '2021-04-30', 'Mumbai', 'Goa'
+   select * from Flight_Schedules
+   delete from Flight_Schedules where Flight_Number>0
+
+   select * from Flight_Reservation  
+   delete from Flight_Reservation where Pnr_no=100
+   
+   select * from Flight_Schedules
+    select * from Passenger_Details
+   delete from Passenger_Details where Pnr_no>320
+
+   select * from Cancellation
+   delete from Cancellation where Pnr_no>320
+   Insert Into Flight_Reservation values (44,1,'2021-04-20','15:05:38.0000000',1,'Eco',7632.22,'Success',',J7')
+   Insert Into Flight_Schedules values(45,'AirIndia','2021-04-30',101,'20:01:00.0000000','00:04:00.0000000','Mumbai','Gujrat','Available',2390,4160,60,30,'J6')
+   
+
+   truncate table passenger_details
+  
